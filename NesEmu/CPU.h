@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "CPUMemoryMap.h"
 
-//Carry, Zero, Interrupt, Decimal, Break, Unused, Overflow, Negative flags 1-bit
+//Carry, Zero, Interrupt, Decimal, Break, Unused, Overflow, Negative flags
 #define CF 8
 #define ZF 7
 #define IF 6
@@ -27,6 +27,7 @@ private:
 	uint8_t opcode;
 
 	uint16_t read16(uint16_t address);
+	bool PagesCrossed(uint16_t addr0, uint16_t addr1);
 public:
 	CPU();
 	void Init();
@@ -35,12 +36,15 @@ public:
 
 	void SetZ(uint8_t value);
 	void SetN(uint8_t value);
+	void SetC(uint16_t value);
+	void SetV(uint16_t sum, uint8_t value);
 	bool GetBit(uint8_t value, int bit);
 
 	void LDA(uint16_t address);
 	void LDX(uint16_t address);
 	void LDY(uint16_t address);
 	void ADC(uint16_t address);
+	void AND(uint16_t address);
 
 	
 	

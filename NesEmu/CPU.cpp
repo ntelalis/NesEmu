@@ -26,7 +26,88 @@ void CPU::Reset(){
 void CPU::Cycle(){
 	opcode = ram.Read(PC);
 	switch (opcode) {	
-	
+	//ADC Instructions
+	case 0x69:
+		ADC(Immediate());
+		PC += 2;
+		cycles += 2;
+		break;
+	case 0x65:
+		ADC(ZeroPage());
+		PC += 2;
+		cycles += 3;
+		break;
+	case 0x75:
+		ADC(ZeroPageX());
+		PC += 2;
+		cycles += 4;
+		break;
+	case 0x6D:
+		ADC(Absolute());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x7D:
+		ADC(AbsoluteX());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x79:
+		ADC(AbsoluteY());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x61:
+		ADC(IndirectX());
+		PC += 2;
+		cycles += 6;
+		break;
+	case 0x71:
+		ADC(IndirectY());
+		PC += 2;
+		cycles += 5;
+		break;
+	//AND Instructions
+	case 0x29:
+		AND(Immediate());
+		PC += 2;
+		cycles += 2;
+		break;
+	case 0x25:
+		AND(ZeroPage());
+		PC += 2;
+		cycles += 3;
+		break;
+	case 0x35:
+		AND(ZeroPage());
+		PC += 2;
+		cycles += 4;
+		break;
+	case 0x2D:
+		AND(Absolute());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x3D:
+		AND(AbsoluteX());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x39:
+		AND(AbsoluteY());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x21:
+		AND(IndirectX());
+		PC += 2;
+		cycles += 6;
+		break;
+	case 0x31:
+		AND(IndirectY());
+		PC += 2;
+		cycles += 5;
+		break;
 	//LDA Instructions
 	case 0xA9:
 		LDA(Immediate());
@@ -51,13 +132,11 @@ void CPU::Cycle(){
 	case 0xBD:
 		LDA(AbsoluteX());
 		PC += 3;
-		//+1 if pages crossed implement
 		cycles += 4;
 		break;
 	case 0xB9:
 		LDA(AbsoluteY());
 		PC += 3;
-		//+1 if pages crossed implement
 		cycles += 4;
 		break;
 	case 0xA1:
@@ -68,7 +147,6 @@ void CPU::Cycle(){
 	case 0xB1:
 		LDA(IndirectY());
 		PC += 2;
-		//+1 if pages crossed implement
 		cycles += 5;
 		break;
 	//LDX Instructions
@@ -95,7 +173,6 @@ void CPU::Cycle(){
 	case 0xBE:
 		LDX(AbsoluteY());
 		PC += 3;
-		//+1 if pages crossed implement
 		cycles += 4;
 		break;
 	//LDY Instructions
@@ -122,7 +199,6 @@ void CPU::Cycle(){
 	case 0xBC:
 		LDX(AbsoluteX());
 		PC += 3;
-		//+1 if pages crossed implement
 		cycles += 4;
 		break;
 	}
@@ -132,16 +208,30 @@ void CPU::Cycle(){
 
 void CPU::SetZ(uint8_t value) {
 	if (value == 0x0)
-		PS |= 1 << 7;
+		PS |= 1 << ZF;
 	else
-		PS &= ~(1 << 7);
+		PS &= ~(1 << ZF);
 }
 
 void CPU::SetN(uint8_t value) {
 	if (value & 0x80 == 0)
-		PS &= ~(1 << 1);
+		PS &= ~(1 << NF);
 	else
-		PS |= 1 << 1;
+		PS |= 1 << NF;
+}
+
+void CPU::SetC(uint16_t value) {
+	if (value > 0xFF)
+		PS |= 1 << CF;
+	else
+		PS &= ~(1 << CF);
+}
+
+void CPU::SetV(uint16_t sum, uint8_t value) {
+	if ((A ^ value) & 0x80 == 0 && (A ^ sum) & 0x80 != 0)
+		PS |= 1 << VF;
+	else
+		PS &= ~(1 << VF);
 }
 
 bool CPU::GetBit(uint8_t value, int bit) {
@@ -169,8 +259,23 @@ void CPU::LDY(uint16_t address) {
 
 void CPU::ADC(uint16_t address) {
 	// I am here
-	A += (int8_t)ram.Read(address) + GetBit(PS,CF);
-	CPU::SetZ(A);
+	uint8_t addr = ram.Read(address);
+	uint16_t sum = A + addr + GetBit(PS, CF);
+	if (GetBit(PS, DF) && false) {
+		//TODO (Decimal mode doesnt work in NES 6502)
+	}
+	else {
+		CPU::SetV(sum,addr);
+		CPU::SetC(sum);
+		A = sum;
+		CPU::SetN(A);
+		CPU::SetZ(A);
+	}
+}
+
+void CPU::AND(uint16_t address) {
+	A &=ram.Read(address);
+	CPU::SetN(A);
 	CPU::SetZ(A);
 }
 
@@ -214,11 +319,17 @@ uint16_t CPU::Absolute(){
 }
 
 uint16_t CPU::AbsoluteX(){
-	return read16(PC + 1) + X;
+	uint16_t addr = read16(PC + 1) + (uint16_t)X;
+	if (PagesCrossed(addr - (uint16_t)X, addr))
+		cycles++;
+	return addr;
 }
 
 uint16_t CPU::AbsoluteY(){
-	return read16(PC + 1) + Y;
+	uint16_t addr = read16(PC + 1) + (uint16_t)Y;
+	if (PagesCrossed(addr - (uint16_t)Y, addr))
+		cycles++;
+	return addr;
 }
 
 uint16_t CPU::Indirect(){
@@ -232,14 +343,22 @@ uint16_t CPU::Indirect(){
 }
 
 uint16_t CPU::IndirectX(){
-	return read16((ram.Read(PC + 1) + X) & 0xFF);
+	return read16(((uint16_t)ram.Read(PC + 1) + (uint16_t)X) & 0xFF);
 }
 
 uint16_t CPU::IndirectY(){
-	return read16(ram.Read(PC + 1)) + Y;
+	uint16_t addr = read16((uint16_t)ram.Read(PC + 1)) + (uint16_t)Y;
+	if (PagesCrossed(addr - (uint16_t)Y, addr))
+		cycles++;
+	return addr;
 }
 
 // Helper function that returns an address from 2 consecutive memory addresses (Little Endian)
 uint16_t CPU::read16(uint16_t address) {
 	return (uint16_t)ram.Read(address + 1) << 8 | (uint16_t)ram.Read(address);
+}
+
+// Helper function which checks if high byte has been altered
+bool CPU::PagesCrossed(uint16_t addr0, uint16_t addr1) {
+	return (addr0 & 0xFF00 != addr1 & 0xFF00);
 }
