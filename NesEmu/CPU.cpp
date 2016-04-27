@@ -508,8 +508,105 @@ void CPU::Cycle(){
 		cycles += 4;
 		break;
 	case 0xBC:
-		LDX(AbsoluteX());
+		LDY(AbsoluteX());
 		PC += 3;
+		cycles += 4;
+		break;
+	//LSR Instructions
+	case 0x4A:
+		LSR(Accumulator());
+		PC += 1;
+		cycles += 2;
+		break;
+	case 0x46:
+		LSR(ZeroPage());
+		PC += 2;
+		cycles += 5;
+		break;
+	case 0x56:
+		LSR(ZeroPageX());
+		PC += 2;
+		cycles += 6;
+		break;
+	case 0x4E:
+		LSR(Absolute());
+		PC += 3;
+		cycles += 6;
+		break;
+	case 0x5E:
+		LSR(AbsoluteX());
+		PC += 3;
+		cycles += 7;
+		break;
+	//NOP Instruction
+	case 0xEA:
+		NOP(Implied());
+		PC += 1;
+		cycles += 2;
+		break;
+	//ORA Instructions
+	case 0x09:
+		ORA(Immediate());
+		PC += 2;
+		cycles += 2;
+		break;
+	case 0x05:
+		ORA(ZeroPage());
+		PC += 2;
+		cycles += 3;
+		break;
+	case 0x15:
+		ORA(ZeroPageX());
+		PC += 2;
+		cycles += 4;
+		break;
+	case 0x0D:
+		ORA(Absolute());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x1D:
+		ORA(AbsoluteX());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x19:
+		ORA(AbsoluteY());
+		PC += 3;
+		cycles += 4;
+		break;
+	case 0x01:
+		ORA(IndirectX());
+		PC += 2;
+		cycles += 6;
+		break;
+	case 0x11:
+		ORA(IndirectY());
+		PC += 2;
+		cycles += 5;
+		break;
+	//PHA Instruction
+	case 0x48:
+		PHA(Implied());
+		PC += 1;
+		cycles += 3;
+		break;
+	//PHP Instruction
+	case 0x08:
+		PHP(Implied());
+		PC += 1;
+		cycles += 3;
+		break;
+	//PLA Instruction
+	case 0x68:
+		PLA(Implied());
+		PC += 1;
+		cycles += 4;
+		break;
+	//PLP Instruction
+	case 0x28:
+		PLP(Implied());
+		PC += 1;
 		cycles += 4;
 		break;
 	}
@@ -830,6 +927,50 @@ void CPU::LDY(uint16_t address) {
 	Y = ram.Read(address);
 	CPU::SetN(Y);
 	CPU::SetZ(Y);
+}
+
+void CPU::LSR(uint16_t address) {
+	if (address == -1) {
+		CPU::SetC((bool)(A & 0x1));
+		A >>= 1;
+		CPU::SetN(A);
+		CPU::SetZ(A);
+	}
+	else {
+		uint8_t value = ram.Read(address);
+		CPU::SetC((bool)(value & 0x1));
+		value >>= 1;
+		CPU::SetN(value);
+		CPU::SetZ(value);
+	}
+}
+
+void CPU::NOP(uint16_t address) {
+
+}
+
+void CPU::ORA(uint16_t address) {
+	A |= ram.Read(address);
+	CPU::SetN(A);
+	CPU::SetZ(A);
+}
+
+void CPU::PHA(uint16_t address) {
+	CPU::Push(A);
+}
+
+void CPU::PHP(uint16_t address) {
+	CPU::Push(PS);
+}
+
+void CPU::PLA(uint16_t address) {
+	A = CPU::Pull();
+	CPU::SetN(A);
+	CPU::SetZ(A);
+}
+
+void CPU::PLP(uint16_t address) {
+	PS = CPU::Pull();
 }
 
 // Addressing Modes
