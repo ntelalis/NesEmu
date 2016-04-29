@@ -112,6 +112,7 @@
   <ItemGroup>
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="CPUMemoryMap.cpp" />
+    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPU.h" />

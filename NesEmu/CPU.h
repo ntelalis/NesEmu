@@ -41,11 +41,13 @@ public:
 
 	void SetZ(uint8_t value);
 	void SetN(uint8_t value);
-	void SetC(uint16_t value);
+	void SetCADC(uint16_t value);
+	void SetCSBC(uint16_t value);
 	void SetC(uint8_t value);
 	void SetC(bool value);
 	void SetD(bool value);
-	void SetV(uint16_t sum, uint8_t value);
+	void SetVADC(uint16_t sum, uint8_t value);
+	void SetVSBC(uint16_t sum, uint8_t value);
 	void SetV(uint8_t value);
 	void SetV(bool value);
 	void SetB(bool value);

@@ -628,8 +628,15 @@ void CPU::SetN(uint8_t value) {
 		PS |= 1 << NF;
 }
 
-void CPU::SetC(uint16_t value) {
+void CPU::SetCADC(uint16_t value) {
 	if (value > 0xFF)
+		PS |= 1 << CF;
+	else
+		PS &= ~(1 << CF);
+}
+
+void CPU::SetCSBC(uint16_t value) {
+	if (value > 0x0)
 		PS |= 1 << CF;
 	else
 		PS &= ~(1 << CF);
@@ -649,8 +656,15 @@ void CPU::SetC(bool value) {
 		PS &= ~(1 << CF);
 }
 
-void CPU::SetV(uint16_t sum, uint8_t value) {
+void CPU::SetVADC(uint16_t sum, uint8_t value) {
 	if ((A ^ value) & 0x80 == 0 && (A ^ sum) & 0x80 != 0)
+		PS |= 1 << VF;
+	else
+		PS &= ~(1 << VF);
+}
+
+void CPU::SetVSBC(uint16_t sum, uint8_t value) {
+	if ((A ^ value) & 0x80 != 0 && (A ^ sum) & 0x80 != 0)
 		PS |= 1 << VF;
 	else
 		PS &= ~(1 << VF);
@@ -698,14 +712,14 @@ bool CPU::GetBit(uint8_t value, int bit) {
 // Instructions
 
 void CPU::ADC(uint16_t address) {
-	uint8_t addr = ram.Read(address);
-	uint16_t sum = A + addr + GetBit(PS, CF);
+	uint8_t value = ram.Read(address);
+	uint16_t sum = A + value + GetBit(PS, CF);
 	if (GetBit(PS, DF) && false) {
 		//TODO (Decimal mode doesnt work in NES 6502)
 	}
 	else {
-		CPU::SetV(sum,addr);
-		CPU::SetC(sum);
+		CPU::SetVADC(sum,value);
+		CPU::SetCADC(sum);
 		A = sum;
 		CPU::SetN(A);
 		CPU::SetZ(A);
@@ -971,6 +985,68 @@ void CPU::PLA(uint16_t address) {
 
 void CPU::PLP(uint16_t address) {
 	PS = CPU::Pull();
+}
+
+void CPU::ROL(uint16_t address) {
+	if (address==-1) {
+		uint8_t value = A;
+		bool bit0 = A & 0x80;
+		A <<= 1;
+		A |= CPU::GetBit(PS,CF);
+		CPU::SetC(bit0);
+		CPU::SetZ(A);
+		CPU::SetN(A);
+	}
+	else {
+		uint8_t value = ram.Read(address);
+		bool bit0 = value & 0x80;
+		value <<= 1;
+		value |= CPU::GetBit(PS, CF);
+		CPU::SetC(bit0);
+		CPU::SetZ(value);
+		CPU::SetN(value);
+	}
+}
+
+void CPU::ROR(uint16_t address) {
+	if (address == -1) {
+		uint8_t value = A;
+		bool bit0 = A & 0x1;
+		A >>= 1;
+		A |= CPU::GetBit(PS, CF) << 7;
+		CPU::SetC(bit0);
+		CPU::SetZ(A);
+		CPU::SetN(A);
+	}
+	else {
+		uint8_t value = ram.Read(address);
+		bool bit0 = value & 0x1;
+		value >>= 1;
+		value |= CPU::GetBit(PS, CF) << 7;
+		CPU::SetC(bit0);
+		CPU::SetZ(value);
+		CPU::SetN(value);
+	}
+}
+
+void CPU::RTI(uint16_t address) {
+	PS = CPU::Pull();
+	PC = CPU::Pull16();
+}
+
+void CPU::RTS(uint16_t address) {
+	PC = CPU::Pull16() + 1;
+}
+
+void CPU::SBC(uint16_t address) {
+	uint8_t value = ram.Read(address);
+	uint16_t sum = A - value - ~(GetBit(PS, CF));
+	CPU::SetVSBC(sum, value);
+	CPU::SetCSBC(sum);
+	A = sum;
+	CPU::SetZ(A);
+	CPU::SetN(A);
+	//I am here
 }
 
 // Addressing Modes
